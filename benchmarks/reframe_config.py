@@ -623,6 +623,7 @@ site_configuration = {
                         '%(check_perfvalues)s|'
                         '%(check_spack_spec)s|'
                         '%(check_extra_resources)s|'
+                        '%(check_profiler)s|'
                         '%(check_env_vars)s'
                     ),
                     'format_perfvars': (
