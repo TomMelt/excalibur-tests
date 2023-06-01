@@ -311,8 +311,7 @@ class SpackTest(rfm.RegressionTest):
             self.job.launcher = LauncherWrapper(self.job.launcher, 'perf-report', ['-o perf-report.txt'])
             self.modules += ['arm/forge/22.0.3']
         elif self.profiler.lower() == 'perf':
-            self.job.launcher = LauncherWrapper(self.job.launcher, '~/linux/tools/perf/perf', ['stat -e power/energy-cores/,power/energy-gpu/,power/energy-pkg/,power/energy-psys/,power/energy-ram/'])
-            # self.modules += ['perf']
+            self.job.launcher = LauncherWrapper(self.job.launcher, 'perf', ['stat -e power/energy-cores/,power/energy-gpu/,power/energy-pkg/,power/energy-psys/,power/energy-ram/'])
         elif self.profiler.lower() == 'amd':
             self.job.launcher = LauncherWrapper(self.job.launcher, 'AMDuProfCLI', ['timechart -e Power -o profile'])
             self.modules += ['amd-uprof/4.0.341']
