@@ -48,6 +48,7 @@ class SphngBase_ifile(SphngBase):
 
     prerun_cmds = ['rm -rf fort* TEST* notify ifile sphng_setup.o']
     executable_opts = ['initial ifile < setup.txt &> sphng_setup.o']
+    run_profiler = False
 
     @sanity_function
     def validate_ifile_generation(self):

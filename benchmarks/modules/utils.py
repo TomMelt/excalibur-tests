@@ -256,7 +256,6 @@ def identify_build_environment(current_partition):
 class SpackTest(rfm.RegressionTest):
     build_system = 'Spack'
     spack_spec = variable(str, value='', loggable=True)
-    profiler = variable(str, value='', loggable=True)
 
     @run_before('compile')
     def setup_spack_environment(self):
@@ -305,28 +304,42 @@ class SpackTest(rfm.RegressionTest):
         if not self.build_locally:
             self.build_job.num_cpus_per_task = min(16, self.current_partition.processor.num_cpus)
 
-    @run_before('run')
-    def setup_profiler(self):
-        if self.profiler.lower() == 'arm':
-            self.job.launcher = LauncherWrapper(self.job.launcher, 'perf-report', ['-o perf-report.txt'])
-            self.modules += ['arm/forge/22.0.3']
-        elif self.profiler.lower() == 'perf':
-            self.job.launcher = LauncherWrapper(self.job.launcher, 'perf', ['stat -e power/energy-cores/,power/energy-gpu/,power/energy-pkg/,power/energy-psys/,power/energy-ram/'])
-        elif self.profiler.lower() == 'amd':
-            self.job.launcher = LauncherWrapper(self.job.launcher, 'AMDuProfCLI', ['timechart -e Power -o profile'])
-            self.modules += ['amd-uprof/4.0.341']
+    # If user sets EXCALIBUR_ENERGY_PROFILER then we want to collect the energy usage
+    if os.getenv('EXCALIBUR_ENERGY_PROFILER'):
 
-    @performance_function('Wh')
-    def energy_usage(self, kind='Energy'):
-        if self.profiler.lower() == 'arm':
-            return extractsingle(r'A breakdown of how the\s+(\S+)\s+Wh was used:', 'perf-report.txt', 1, float)
-        elif self.profiler.lower() == 'perf':
-            # Perf outputs energy with commas e.g., "1,270.20 Joules" which cannot be automatically
-            # converted into a float. Therefore we do it in two stages
-            energy_J = extractsingle(r'\s+(\S+)\s+Joules power/energy-pkg/', self.stderr, 1, parse_perf_output)
-            energy_Wh = energy_J / 3600.
-            return energy_Wh
-        else:
+        profiler = variable(str, value='', loggable=True)
+        run_profiler = True
+
+        @run_before('run')
+        def setup_profiler(self):
+
+            self.profiler = os.getenv('EXCALIBUR_ENERGY_PROFILER').lower()
+
+            if os.getenv('EXCALIBUR_ENERGY_PROFILER_MODULE'):
+                self.profiler_module = os.getenv('EXCALIBUR_ENERGY_PROFILER_MODULE')
+                self.modules += [os.getenv('EXCALIBUR_ENERGY_PROFILER_MODULE')]
+
+            if self.run_profiler:
+                if self.profiler == 'arm':
+                    self.job.launcher = LauncherWrapper(self.job.launcher, 'perf-report', ['-o perf-report.txt'])
+                elif self.profiler == 'perf':
+                    self.job.launcher = LauncherWrapper(self.job.launcher, 'perf', ['stat -e power/energy-cores/,power/energy-gpu/,power/energy-pkg/,power/energy-psys/,power/energy-ram/'])
+                elif self.profiler == 'amd':
+                    self.job.launcher = LauncherWrapper(self.job.launcher, 'AMDuProfCLI', ['timechart -e Power -o profile'])
+                else:
+                    msg = f'Energy profiler {self.profiler} is not supported.'
+                    raise KeyError(self.profiler)
+
+        @performance_function('Wh')
+        def energy_usage(self, kind='Energy'):
+            if self.profiler.lower() == 'arm':
+                return extractsingle(r'A breakdown of how the\s+(\S+)\s+Wh was used:', 'perf-report.txt', 1, float)
+            elif self.profiler.lower() == 'perf':
+                # Perf outputs energy with commas e.g., "1,270.20 Joules" which cannot be automatically
+                # converted into a float. Therefore we do it in two stages
+                energy_J = extractsingle(r'\s+(\S+)\s+Joules power/energy-pkg/', self.stderr, 1, parse_perf_output)
+                energy_Wh = energy_J / 3600.
+                return energy_Wh
             return 0
 
 if __name__ == '__main__':
