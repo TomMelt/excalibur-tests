@@ -332,14 +332,15 @@ class SpackTest(rfm.RegressionTest):
 
         @performance_function('Wh')
         def energy_usage(self, kind='Energy'):
-            if self.profiler.lower() == 'arm':
-                return extractsingle(r'A breakdown of how the\s+(\S+)\s+Wh was used:', 'perf-report.txt', 1, float)
-            elif self.profiler.lower() == 'perf':
-                # Perf outputs energy with commas e.g., "1,270.20 Joules" which cannot be automatically
-                # converted into a float. Therefore we do it in two stages
-                energy_J = extractsingle(r'\s+(\S+)\s+Joules power/energy-pkg/', self.stderr, 1, parse_perf_output)
-                energy_Wh = energy_J / 3600.
-                return energy_Wh
+            if self.run_profiler:
+                if self.profiler.lower() == 'arm':
+                    return extractsingle(r'A breakdown of how the\s+(\S+)\s+Wh was used:', 'perf-report.txt', 1, float)
+                elif self.profiler.lower() == 'perf':
+                    # Perf outputs energy with commas e.g., "1,270.20 Joules" which cannot be automatically
+                    # converted into a float. Therefore we do it in two stages
+                    energy_J = extractsingle(r'\s+(\S+)\s+Joules power/energy-pkg/', self.stderr, 1, parse_perf_output)
+                    energy_Wh = energy_J / 3600.
+                    return energy_Wh
             return 0
 
 if __name__ == '__main__':
